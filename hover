@@ -24,6 +24,8 @@ Servo b;
 Servo c;
 Servo d;
 
+float x, y, z;
+
 MPU6050 mpu(Wire);
 unsigned long timer = 0;
 
@@ -47,8 +49,7 @@ void setup(){
     mpu.calcOffsets();
     Serial.println("termina");
 
-      Input = analogRead(0);
-  Setpoint = 100;
+      
 
   //turn the PID on
   myPIDx.SetMode(AUTOMATIC);
@@ -75,21 +76,22 @@ void setup(){
 void loop(){
 
     mpu.update();
-
+     */
     if((millis()-timer) >10){
         Serial.print("X:")
         Serial.print(mpu.getAngleX());
         Serial.print("Y:")
         Serial.print(mpu.getAngleY());
-        Serial.print("Z:")
+        Serial.print("Z:");
         Serial.print(mpu.getAngleZ());
         
         
             }
-
-    float x = mpu.getAngleX();
-    float y = mpu.getAngleY();
-    float z = mpu.getAngleZ();
+           */
+          
+     x = mpu.getAngleX();
+     y = mpu.getAngleY();
+     z = mpu.getAngleZ();
 
     
   
