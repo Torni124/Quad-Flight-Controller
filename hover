@@ -18,6 +18,7 @@ double consKpy=1, consKiy=0.05, consKdy=0.25;
 double aggKpz=4, aggKiz=0.2, aggKdz=1;
 double consKpz=1, consKiz=0.05, consKdz=0.25;
 
+int t = 90;
 Servo a;
 Servo b;
 Servo c;
@@ -129,10 +130,10 @@ void loop(){
   myPIDy.Compute();
   myPIDz.Compute();
 
-  esc1 = 0 - Outputx - Outputy - Outputz;
-  esc2 = 0 - Outputx + Outputy + Outputz;
-  esc3 = 0 + Outputx + Outputy - Outputz;
-  esc4 = 0 + Outputx - Outputy + Outputz;
+  esc1 = t - Outputz - Outputx - Outputy;
+  esc2 = t + Outputz + Outputy + Outputx;
+  esc3 = t - Outputz - Outputx + Outputy;
+  esc4 = t + Outputz - Outputx - Outputy;
 
   a.write(esc1);
   b.write(esc2);
