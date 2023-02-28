@@ -1,0 +1,142 @@
+#include<Servo.h>
+#include<PID_v1.h>
+#include "Wire.h"
+#include <MPU6050_light.h>
+
+double Setpointx, Inputx, Outputx;
+double Setpointy, Inputy, Outputy;
+double Setpointz, Inputz, Outputz;
+
+int esc1, esc2, esc3, esc4;
+
+double aggKpx=4, aggKix=0.2, aggKdx=1;
+double consKpx=1, consKix=0.05, consKdx=0.25;
+
+double aggKpy=4, aggKiy=0.2, aggKdy=1;
+double consKpy=1, consKiy=0.05, consKdy=0.25;
+
+double aggKpz=4, aggKiz=0.2, aggKdz=1;
+double consKpz=1, consKiz=0.05, consKdz=0.25;
+
+Servo a;
+Servo b;
+Servo c;
+Servo d;
+
+MPU6050 mpu(Wire);
+unsigned long timer = 0;
+
+//Specify the links and initial tuning parameters
+PID myPIDx(&Inputx, &Outputx, &Setpointx, consKpx, consKix, consKdx, DIRECT);
+PID myPIDy(&Inputy, &Outputy, &Setpointy, consKpy, consKiy, consKdy, DIRECT);
+PID myPIDz(&Inputz, &Outputz, &Setpointz, consKpz, consKiz, consKdz, DIRECT);
+
+
+void setup(){
+      Serial.begin(9600);
+    Wire.begin();
+
+    byte status = mpu.begin();
+    Serial.print(F("MPU6050 status: "));
+    Serial.println(status);
+    while(status!=0){}
+
+    Serial.println(F("Doing maths no move"));
+    delay(1000);
+    mpu.calcOffsets();
+    Serial.println("termina");
+
+      Input = analogRead(0);
+  Setpoint = 100;
+
+  //turn the PID on
+  myPIDx.SetMode(AUTOMATIC);
+  myPIDy.SetMode(AUTOMATIC);
+  myPIDz.SetMode(AUTOMATIC);
+
+  Setpointx = 0;
+  Setpointy = 0;
+  Setpointz = 0;
+  Inputx = x;
+  Inputy = y;
+  Inputz = z;
+
+ a.attach(4);
+ b.attach(5);
+ c.attach(6);
+ d.attach(7);
+//  Setpointc =
+//  Setpointd = 
+
+
+}
+
+void loop(){
+
+    mpu.update();
+
+    if((millis()-timer) >10){
+        Serial.print("X:")
+        Serial.print(mpu.getAngleX());
+        Serial.print("Y:")
+        Serial.print(mpu.getAngleY());
+        Serial.print("Z:")
+        Serial.print(mpu.getAngleZ());
+        
+        
+            }
+
+    float x = mpu.getAngleX();
+    float y = mpu.getAngleY();
+    float z = mpu.getAngleZ();
+
+    
+  
+  double gapx = abs(Setpointx-Inputy); //distance away from setpoint
+  if(gapx<10)
+  {  //we're close to setpoint, use conservative tuning parameters
+    myPIDx.SetTunings(consKpx, consKix, consKdx);
+  }
+  else
+  {
+     //we're far from setpoint, use aggressive tuning parameters
+     myPIDx.SetTunings(aggKpx, aggKix, aggKdx);
+  }
+ //*******************
+  double gapy = abs(Setpointy-Inputy); //distance away from setpoint
+  if(gapy<10)
+  {  //we're close to setpoint, use conservative tuning parameters
+    myPIDy.SetTunings(consKpy, consKiy, consKdy);
+  }
+  else
+  {
+     //we're far from setpoint, use aggressive tuning parameters
+     myPIDy.SetTunings(aggKpy, aggKiy, aggKdy);
+  }
+//***********************
+  double gapz = abs(Setpointz-Inputz); //distance away from setpoint
+  if(gapz<10)
+  {  //we're close to setpoint, use conservative tuning parameters
+    myPIDz.SetTunings(consKpz, consKiz, consKdz);
+  }
+  else
+  {
+     //we're far from setpoint, use aggressive tuning parameters
+     myPIDz.SetTunings(aggKpz, aggKiz, aggKdz);
+  }
+  
+  myPIDx.Compute();
+  myPIDy.Compute();
+  myPIDz.Compute();
+
+  esc1 = 0 - Outputx - Outputy - Outputz;
+  esc2 = 0 - Outputx + Outputy + Outputz;
+  esc3 = 0 + Outputx + Outputy - Outputz;
+  esc4 = 0 + Outputx - Outputy + Outputz;
+
+  a.write(esc1);
+  b.write(esc2);
+  c.write(esc3);
+  d.write(esc4);
+  
+}
