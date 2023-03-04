@@ -1,0 +1,135 @@
+
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+
+
+const uint64_t pipeIn = 0xE8E8F0F0E1LL;     //Remember that this code is the same as in the transmitter
+RF24 radio(9, 8);  //CSN and CE pins
+
+// The sizeof this struct should not exceed 32 bytes
+struct Received_data {
+  byte j1x;
+  byte j1y;
+  byte j2x;
+  byte j2y;
+  //byte ch5;
+  //byte ch6;
+ 
+};
+
+Servo servo1;
+
+
+int pos = 0;
+
+Received_data received_data;
+
+int m1p1 = 2;
+int m1p2 = 3;
+
+int m2p1 = 6;
+int m2p2 = 7;
+
+
+int mspeed;
+int j1x_value = 0;
+int j1y_value = 0;
+int j2x_value = 0;
+int j2y_value = 0;
+
+
+
+void reset_the_Data() 
+{
+  // 'safe' values 
+  received_data.j1x = 127;      //Throttle (channel 1) to 0
+  received_data.j1y = 127;
+  received_data.j2x = 127;
+  received_data.j2y = 127;
+  //received_data.ch5 = 0;
+  //received_data.ch6 = 0;
+
+}
+
+
+
+
+
+void setup()
+{
+
+
+servo1.attach(8);
+
+pinMode(10, OUTPUT);
+  pinMode(m1p1, OUTPUT);
+ pinMode(m1p2, OUTPUT);
+ pinMode(m2p1, OUTPUT);
+ pinMode(m2p2, OUTPUT);
+ //pinMode(m3, OUTPUT);
+ //pinMode(m4, OUTPUT);
+
+
+  reset_the_Data();
+Serial.begin(9600);
+  
+  radio.begin();
+  radio.setAutoAck(false);
+  radio.setDataRate(RF24_250KBPS);  
+  radio.openReadingPipe(1,pipeIn);
+  
+  
+  radio.startListening();
+
+}
+
+
+unsigned long lastRecvTime = 0;
+
+//We create the function that will read the data each certain time
+void receive_the_data()
+{
+  while ( radio.available() ) {
+  radio.read(&received_data, sizeof(Received_data));
+  lastRecvTime = millis(); //Here we receive the data
+}
+}
+
+
+
+void loop()
+{
+  //Receive the radio data
+  receive_the_data();    
+
+
+  unsigned long now = millis();
+  if ( now - lastRecvTime > 1000 ) {
+    // signal lost?
+    reset_the_Data();
+    //Go up and change the initial values if you want depending on
+    //your aplications. Put 0 for throttle in case of drones so it won't
+    //fly away
+  } 
+  
+  
+  j1x_value = map(received_data.j1x,0,255,0,1000);
+  j1y_value = map(received_data.j1y,0,255,0,1000);
+  j2x_value = map(received_data.j2x,0,255,0,1000);
+  j2y_value = map(received_data.j2y,0,255,0,1000);
+  //ch5_value = map(received_data.ch5,0,1,1000,2000);
+  //ch6_value = map(received_data.ch6,0,1,1000,2000);
+
+
+   Serial.print("j1PotX: ");
+  Serial.print(received_data.j1x);
+  Serial.print("; j1PotY: ");
+  Serial.print(received_data.j1y);
+  //Serial.print("; button1: ");i
+//  Serial.print(data.button1);
+  Serial.print("; j2PotX: ");
+  Serial.print(received_data.j2x); 
+  Serial.print("; j2PotY: ");
+  Serial.println(received_data.j2y);
+}
