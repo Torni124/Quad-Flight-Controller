@@ -9,8 +9,12 @@
 double Setpointx, Inputx, Outputx;
 double Setpointy, Inputy, Outputy;
 double Setpointz, Inputz, Outputz;
+double Setpointt, Inputt, Outputt;
 
 int esc1, esc2, esc3, esc4;
+
+int left, right, forward, back;
+
 
 double aggKpx=4, aggKix=0.2, aggKdx=1;
 double consKpx=1, consKix=0.05, consKdx=0.25;
@@ -21,7 +25,10 @@ double consKpy=1, consKiy=0.05, consKdy=0.25;
 double aggKpz=4, aggKiz=0.2, aggKdz=1;
 double consKpz=1, consKiz=0.05, consKdz=0.25;
 
-int t = 90;
+double aggKpt=4, aggKit=0.2, aggKdt=1;
+double consKpt=1, consKit=0.05, consKdt=0.25;
+
+int t = 0;
 Servo a;
 Servo b;
 Servo c;
@@ -67,7 +74,7 @@ unsigned long timer = 0;
 PID myPIDx(&Inputx, &Outputx, &Setpointx, consKpx, consKix, consKdx, DIRECT);
 PID myPIDy(&Inputy, &Outputy, &Setpointy, consKpy, consKiy, consKdy, DIRECT);
 PID myPIDz(&Inputz, &Outputz, &Setpointz, consKpz, consKiz, consKdz, DIRECT);
-
+PID myPIDt(&Inputt, &Outputt, &Setpointt, consKpt, consKit, consKdt, DIRECT);
 
 void setup(){
       Serial.begin(9600);
@@ -100,6 +107,7 @@ radio.begin();
   myPIDx.SetMode(AUTOMATIC);
   myPIDy.SetMode(AUTOMATIC);
   myPIDz.SetMode(AUTOMATIC);
+  myPIDt.SetMode(AUTOMATIC);
 
   Setpointx = 0;
   Setpointy = 0;
@@ -112,8 +120,6 @@ radio.begin();
  b.attach(5);
  c.attach(6);
  d.attach(7);
-//  Setpointc =
-//  Setpointd = 
 
 
 }
@@ -182,21 +188,14 @@ void loop(){
     reset_the_Data();
   } 
 
-   j1x_value = map(received_data.j1x,0,255,0,1000);
-  j1y_value = map(received_data.j1y,0,255,0,1000);
-  j2x_value = map(received_data.j2x,0,255,0,1000);
+   j1x_value = map(received_data.j1x,0,255,-30,30);
+  j1y_value = map(received_data.j1y,0,255,0,130);
+  j2x_value = map(received_data.j2x,0,255,-30,30);
   j2y_value = map(received_data.j2y,0,255,0,1000);
 
-   Serial.print("j1PotX: ");
-  Serial.print(received_data.j1x);
-  Serial.print("; j1PotY: ");
-  Serial.print(received_data.j1y);
-  //Serial.print("; button1: ");i
-//  Serial.print(data.button1);
-  Serial.print("; j2PotX: ");
-  Serial.print(received_data.j2x); 
-  Serial.print("; j2PotY: ");
-  Serial.println(received_data.j2y);
+  
+  Setpointx = j1x_value;
+  Setpointy = j2y_value;
   
   double gapx = abs(Setpointx-Inputy); //distance away from setpoint
   if(gapx<10)
@@ -234,12 +233,13 @@ void loop(){
   myPIDx.Compute();
   myPIDy.Compute();
   myPIDz.Compute();
+
+  t = j1y_value;
   
   esc1 = t - Outputz - Outputx - Outputy;
   esc2 = t + Outputz + Outputy + Outputx;
   esc3 = t - Outputz - Outputx + Outputy;
-  esc4 = t + Outputz - Outputx - Outputy;
-  
+  esc4 = t + Outputz - Outputx - Outputy;  
 
 
   if(received_data.j1y < 50 && received_data.j2y < 50){
