@@ -1,0 +1,280 @@
+#include<Servo.h>
+#include<PID_v1.h>
+#include "Wire.h"
+#include <MPU6050_light.h>
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+
+double Setpointx, Inputx, Outputx;
+double Setpointy, Inputy, Outputy;
+double Setpointz, Inputz, Outputz;
+
+int esc1, esc2, esc3, esc4;
+
+
+double aggKpx=4, aggKix=0.2, aggKdx=1;
+double consKpx=1, consKix=0.05, consKdx=0.25;
+
+double aggKpy=4, aggKiy=0.2, aggKdy=1;
+double consKpy=1, consKiy=0.05, consKdy=0.25;
+
+double aggKpz=4, aggKiz=0.2, aggKdz=1;
+double consKpz=1, consKiz=0.05, consKdz=0.25;
+
+
+
+int j1x_value = 0;
+int j1y_value = 0;
+int j2x_value = 0;
+int j2y_value = 0;
+
+int t = 0;
+Servo a;
+Servo b;
+Servo c;
+Servo d;
+
+float x, y, z;
+
+
+    bool safe = 0;
+    bool on = 0;
+
+
+const uint64_t pipeIn = 0xE8E8F0F0E1LL;   
+RF24 radio(9, 8);
+
+struct Received_data {
+  byte j1x;
+  byte j1y;
+  byte j2x;
+  byte j2y;
+  //byte ch5;
+  //byte ch6;
+};
+
+Received_data received_data;
+
+void reset_the_Data() 
+{
+  // 'safe' values 
+  received_data.j1x = 0;      //Throttle (channel 1) to 0
+  received_data.j1y = 0;
+  received_data.j2x = 0;
+  received_data.j2y = 0;
+  //received_data.ch5 = 0;
+  //received_data.ch6 = 0;
+
+}
+
+MPU6050 mpu(Wire);
+unsigned long timer = 0;
+
+//Specify the links and initial tuning parameters
+PID myPIDx(&Inputx, &Outputx, &Setpointx, consKpx, consKix, consKdx, DIRECT);
+PID myPIDy(&Inputy, &Outputy, &Setpointy, consKpy, consKiy, consKdy, DIRECT);
+PID myPIDz(&Inputz, &Outputz, &Setpointz, consKpz, consKiz, consKdz, DIRECT);
+
+
+void setup(){
+      Serial.begin(9600);
+    Wire.begin();
+
+    byte status = mpu.begin();
+    Serial.print(F("MPU6050 status: "));
+    Serial.println(status);
+    while(status!=0){}
+
+    Serial.println(F("Doing maths no move"));
+    delay(1000);
+    mpu.calcOffsets();
+    Serial.println("termina");
+
+    pinMode(LED_BUILTIN, OUTPUT);
+      
+reset_the_Data();
+
+radio.begin();
+  radio.setAutoAck(false);
+  radio.setDataRate(RF24_250KBPS);  
+  radio.openReadingPipe(1,pipeIn);
+  
+  
+  radio.startListening();
+
+  //turn the PID on
+  myPIDx.SetMode(AUTOMATIC);
+  myPIDy.SetMode(AUTOMATIC);
+  myPIDz.SetMode(AUTOMATIC);
+
+
+  Setpointx = 0;
+  Setpointy = 0;
+  Setpointz = 0;
+  Inputx = x;
+  Inputy = y;
+  Inputz = z;
+
+ a.attach(4);
+ b.attach(5);
+ c.attach(6);
+ d.attach(7);
+
+
+}
+
+unsigned long lastRecvTime = 0;
+
+//We create the function that will read the data each certain time
+void receive_the_data()
+{
+  while ( radio.available() ) {
+  radio.read(&received_data, sizeof(Received_data));
+  lastRecvTime = millis(); //Here we receive the data
+}
+}
+
+
+void loop(){
+
+
+
+    mpu.update();
+     /*
+    if((millis()-timer) >10){
+        Serial.print("X:")
+        Serial.print(mpu.getAngleX());
+        Serial.print("Y:")
+        Serial.print(mpu.getAngleY());
+        Serial.print("Z:");
+        Serial.print(mpu.getAngleZ());
+        
+        
+            }
+           */
+          
+     x = mpu.getAngleX();
+     y = mpu.getAngleY();
+     z = mpu.getAngleZ();
+
+      receive_the_data();    
+
+
+  unsigned long now = millis();
+  if ( now - lastRecvTime > 1000 ) {
+    // signal lost?
+    reset_the_Data();
+  } 
+
+  j1x_value = map(received_data.j1x,0,255,-30,30);
+  j1y_value = map(received_data.j1y,0,255,0,140);
+  j2x_value = map(received_data.j2x,0,255,-30,30);
+  j2y_value = map(received_data.j2y,0,255,0,1000);
+
+  
+   if(safe == 0) {
+       
+        if(received_data.j1y > 200 && received_data.j2x < 30 ) {
+            
+                digitalWrite(LED_BUILTIN, HIGH);
+                delay(2500);
+                digitalWrite(LED_BUILTIN, LOW);
+                delay(2500);
+                digitalWrite(LED_BUILTIN, HIGH);
+                safe = 1;
+            
+        }
+        
+   
+    } else if (safe == 1){
+
+  
+  Setpointx = j1x_value;
+  Setpointy = j2y_value;
+  
+  double gapx = abs(Setpointx-Inputy); //distance away from setpoint
+  if(gapx<10)
+  {  //we're close to setpoint, use conservative tuning parameters
+    myPIDx.SetTunings(consKpx, consKix, consKdx);
+  }
+  else
+  {
+     //we're far from setpoint, use aggressive tuning parameters
+     myPIDx.SetTunings(aggKpx, aggKix, aggKdx);
+  }
+ //*******************
+  double gapy = abs(Setpointy-Inputy); //distance away from setpoint
+  if(gapy<10)
+  {  //we're close to setpoint, use conservative tuning parameters
+    myPIDy.SetTunings(consKpy, consKiy, consKdy);
+  }
+  else
+  {
+     //we're far from setpoint, use aggressive tuning parameters
+     myPIDy.SetTunings(aggKpy, aggKiy, aggKdy);
+  }
+//***********************
+  double gapz = abs(Setpointz-Inputz); //distance away from setpoint
+  if(gapz<10)
+  {  //we're close to setpoint, use conservative tuning parameters
+    myPIDz.SetTunings(consKpz, consKiz, consKdz);
+  }
+  else
+  {
+     //we're far from setpoint, use aggressive tuning parameters
+     myPIDz.SetTunings(aggKpz, aggKiz, aggKdz);
+  }
+  
+  myPIDx.Compute();
+  myPIDy.Compute();
+  myPIDz.Compute();
+
+  t = j1y_value;
+  
+  esc1 = t - Outputz - Outputx - Outputy;
+  esc2 = t + Outputz + Outputy + Outputx;
+  esc3 = t - Outputz - Outputx + Outputy;
+  esc4 = t + Outputz - Outputx - Outputy;
+/*
+    Serial.print(esc1);
+    Serial.print(" ");
+    Serial.print(esc2);
+    Serial.print(" ");
+    Serial.print(esc3);
+    Serial.print(" ");
+    Serial.println(esc4);
+*/
+    /* Serial.print(j1x_value);
+    Serial.print(" ");
+    Serial.print(j1y_value);
+    Serial.print(" ");
+    Serial.print(j2x_value);
+    Serial.print(" ");
+    Serial.println(j2y_value);
+*/
+
+  
+
+  if(received_data.j1x < 50 && received_data.j2y < 200){
+  safe = 0;
+  esc1 = 0;
+  esc2 = 0;
+  esc3 = 0;
+  esc4 = 0;
+  a.write(0);
+  b.write(0);
+  c.write(0);
+  d.write(0);
+  } else if (safe == 1){
+  a.write(esc1);
+  b.write(esc2);
+  c.write(esc3);
+  d.write(esc4);
+  }
+
+  }
+    
+    
+    }
+
