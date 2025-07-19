@@ -3,6 +3,8 @@ double Setpoint, Input, Output;
 double aggKp=4, aggKi=0.2, aggKd=1;
 double consKp=1, consKi=0.05, consKd=0.25;
 
+//oh boy lookit all these changes why am I using C++ I hate this
+int cheese = 1;
 
 //Specify the links and initial tuning parameters
 PID myPID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
