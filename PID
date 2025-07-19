@@ -3,11 +3,11 @@ double Setpoint, Input, Output;
 double aggKp=4, aggKi=0.2, aggKd=1;
 double consKp=1, consKi=0.05, consKd=0.25;
 
-//oh boy lookit all these changes why am I using C++ I hate this
-int cheese = 1;
+include math.py
+//hey seriously where did all my changes go I thought that was gonna work 
 
 //Specify the links and initial tuning parameters
-PID myPID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
+PID somePID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
 
 void setup()
 {
@@ -16,7 +16,7 @@ void setup()
   Setpoint = 100;
 
   //turn the PID on
-  myPID.SetMode(AUTOMATIC);
+  somePID.SetMode(AUTOMATIC);
 }
 
 void loop()
@@ -26,15 +26,15 @@ void loop()
   double gap = abs(Setpoint-Input); //distance away from setpoint
   if(gap<10)
   {  //we're close to setpoint, use conservative tuning parameters
-    myPID.SetTunings(consKp, consKi, consKd);
+    somePID.SetTunings(consKp, consKi, consKd);
   }
   else
   {
      //we're far from setpoint, use aggressive tuning parameters
-     myPID.SetTunings(aggKp, aggKi, aggKd);
+     somePID.SetTunings(aggKp, aggKi, aggKd);
   }
   
-  myPID.Compute();
+  somePID.Compute();
   analogWrite(3,Output);
 }
 
