@@ -2,10 +2,10 @@
 double Setpoint, Input, Output;
 double aggKp=4, aggKi=0.2, aggKd=1;
 double consKp=1, consKi=0.05, consKd=0.25;
-include math.py
+
 //hey seriously where did all my changes go I thought that was gonna work 
 //Specify the links and initial tuning parameters
-PID somePID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
+PID aPID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
 
 void setup()
 {
@@ -14,7 +14,7 @@ void setup()
   Setpoint = 100;
 
   //turn the PID on
-  somePID.SetMode(AUTOMATIC);
+  aPID.SetMode(AUTOMATIC);
 }
 
 void loop()
@@ -29,10 +29,10 @@ void loop()
   else
   {
      //we're far from setpoint, use aggressive tuning parameters
-     somePID.SetTunings(aggKp, aggKi, aggKd);
+     aPID.SetTunings(aggKp, aggKi, aggKd);
   }
   
-  somePID.Compute();
+  aPID.Compute();
   analogWrite(3,Output);
 }
 
